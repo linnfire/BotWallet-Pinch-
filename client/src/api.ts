@@ -1,6 +1,10 @@
 import type { Wallet } from './types';
+
+const apiBase = ((import.meta.env.VITE_BOTWALLET_API_BASE_URL as string | undefined) || '').replace(/\/$/, '');
+const apiUrl = (path: string) => `${apiBase}${path}`;
+
 const request = async <T>(path: string, options?: RequestInit): Promise<T> => {
-  const response = await fetch(path, { headers: { 'Content-Type': 'application/json', ...options?.headers }, ...options });
+  const response = await fetch(apiUrl(path), { headers: { 'Content-Type': 'application/json', ...options?.headers }, ...options });
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
     throw new Error('The wallet service returned an unexpected response. Restart the app so the API server loads the latest routes.');
@@ -13,5 +17,6 @@ export const api = {
   wallet: () => request<Wallet>('/api/pinch/wallet'),
   connectWallet: (creditCardToken: string) => request<{ success: boolean; payerId: string; walletConnected: boolean }>('/api/pinch/connect-wallet', { method: 'POST', body: JSON.stringify({ creditCardToken }) }),
   updateWalletRules: (dailyLimitCents: number, autoApproveCents: number) => request<Wallet>('/api/pinch/wallet', { method: 'PATCH', body: JSON.stringify({ dailyLimitCents, autoApproveCents }) }),
-  purchase: () => request<{ success: boolean; wallet: { todaySpendCents: number; remainingCents: number } }>('/api/agent/purchase-premium', { method: 'POST' })
+  purchase: () => request<{ success: boolean; wallet: { todaySpendCents: number; remainingCents: number } }>('/api/agent/purchase-premium', { method: 'POST' }),
+  unlockPremiumReport: (reportId?: string) => request<{ success: boolean; report: { title: string; content: string } }>('/api/agent/unlock-premium', { method: 'POST', body: JSON.stringify(reportId ? { reportId } : {}) })
 };

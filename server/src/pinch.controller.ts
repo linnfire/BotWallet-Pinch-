@@ -1,10 +1,22 @@
 import type { Request, Response } from 'express';
 import { authenticatedUserId, authenticatedUserProfile } from './auth.js';
 import { addCreditCardSource, createPayer, createRealtimePayment, PinchError } from './pinch.service.js';
+import { botNewsBaseUrl, defaultReportId } from './config.js';
 import { getWallet, saveWallet } from './store.js';
 
 const DAILY_LIMIT_CENTS = 500;
 const AUTO_APPROVE_CENTS = 10;
+
+type PaymentOffer = {
+  merchant: string;
+  resourceId: string;
+  title: string;
+  priceInCents: number;
+  currency: string;
+  paymentProvider: string;
+};
+
+type UnlockedReport = { title: string; content: string };
 
 function todaySpend(wallet = getWallet('')!) {
   const date = new Date().toDateString();
@@ -69,6 +81,67 @@ export async function purchasePremiumContent(request: Request, response: Respons
     await saveWallet(userId, wallet);
     return response.json({ success: true, purchase, wallet: { todaySpendCents: todaySpend(wallet), remainingCents: wallet.dailyLimitCents - todaySpend(wallet) } });
   } catch (error) { return sendPinchError(response, error); }
+}
+
+export async function unlockPremiumReport(request: Request, response: Response) {
+  const userId = authenticatedUserId(request);
+  const wallet = getWallet(userId);
+  if (!wallet?.sourceId) return response.status(409).json({ error: 'Connect Bot Limit before making purchases.' });
+
+  const reportId = typeof request.body?.reportId === 'string' && request.body.reportId.trim() ? request.body.reportId.trim() : defaultReportId();
+  const botNewsUrl = botNewsBaseUrl();
+  const agentId = request.header('x-agent-id') || `${userId}-agent`;
+  const reportUrl = `${botNewsUrl}/api/reports/${encodeURIComponent(reportId)}`;
+
+  try {
+    const initialResponse = await fetch(reportUrl, { headers: { 'x-agent-id': agentId } });
+    if (initialResponse.ok) {
+      const report = await initialResponse.json() as UnlockedReport;
+      return response.json({ success: true, alreadyUnlocked: true, report });
+    }
+    if (initialResponse.status !== 402) {
+      return response.status(502).json({ error: `BotNews returned ${initialResponse.status} while requesting premium content.` });
+    }
+
+    const offer = await initialResponse.json() as PaymentOffer;
+    if (!Number.isSafeInteger(offer.priceInCents) || offer.priceInCents < 1) {
+      return response.status(502).json({ error: 'BotNews returned an invalid payment offer.' });
+    }
+
+    const spendToday = todaySpend(wallet);
+    if (offer.priceInCents > wallet.autoApproveCents) return response.status(403).json({ error: 'This purchase exceeds the auto-approval threshold.' });
+    if (spendToday + offer.priceInCents > wallet.dailyLimitCents) return response.status(403).json({ error: 'This purchase exceeds the daily Bot Limit budget.' });
+
+    const payment = await createRealtimePayment(wallet.payerId, wallet.sourceId, offer.priceInCents, `BotWallet: ${offer.title}`);
+    const purchase = { id: payment.id, description: offer.title, amountCents: offer.priceInCents, createdAt: new Date().toISOString() };
+    wallet.purchases.push(purchase);
+    await saveWallet(userId, wallet);
+
+    const settlementResponse = await fetch(`${reportUrl}/purchase`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-agent-id': agentId },
+      body: JSON.stringify({ agentId })
+    });
+    if (!settlementResponse.ok) {
+      return response.status(502).json({ error: `BotNews settlement failed with ${settlementResponse.status}.` });
+    }
+
+    const unlockedResponse = await fetch(reportUrl, { headers: { 'x-agent-id': agentId } });
+    if (!unlockedResponse.ok) {
+      return response.status(502).json({ error: `BotNews did not unlock the report after payment (${unlockedResponse.status}).` });
+    }
+
+    const report = await unlockedResponse.json() as UnlockedReport;
+    return response.json({
+      success: true,
+      report,
+      offer,
+      purchase,
+      wallet: { todaySpendCents: todaySpend(wallet), remainingCents: wallet.dailyLimitCents - todaySpend(wallet) }
+    });
+  } catch (error) {
+    return sendPinchError(response, error);
+  }
 }
 
 function sendPinchError(response: Response, error: unknown) {

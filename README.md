@@ -1,68 +1,141 @@
-# BotWallet (AI Auto Wallet)
+# BotWallet (Pinch)
 
-## Built with Codex and GPT-5.6
+BotWallet is an AI customer wallet demo for autonomous commerce.
 
-BotWallet was built using Codex with GPT-5.6.
+This repository contains:
+- BotWallet: React frontend plus Node/Express backend in the repo root.
+- BotNews: merchant demo app in BotNews/.
+- agent.ts: terminal demo for the full HTTP 402 flow.
 
-Codex:
-- Build the BotWallet agent payment architecture
-- Implement the HTTP 402 Payment Required flow
-- Connect BotNews as a machine-readable merchant
-- Integrate Pinch for payment processing
-- Implement Bot Limit spending controls
-- Build the CLI agent demo
-- Debug and iterate on the payment and settlement flow
-- Refine the user interface and agent interaction experience
+Core flow:
+1. Agent requests premium content from BotNews.
+2. BotNews returns HTTP 402 Payment Required with a machine-readable offer.
+3. BotWallet validates Bot Limit budget rules.
+4. BotWallet charges through Pinch.
+5. BotWallet settles purchase with BotNews.
+6. Agent retries and receives premium content.
 
-Key architectural decisions were made around:
-- Using HTTP 402 to allow websites to communicate payment requirements directly to AI agents
-- Separating the agent, BotWallet, payment provider, and merchant
-- Using Bot Limit to enforce spending rules before payment
-- Allowing the agent to retry the original request after payment confirmation
+## Local development
 
-GPT-5.6 and Codex were used throughout development to accelerate implementation, debugging, architectural iteration, and refinement. They were able to interpret vague ideas like: "build a bot that can pay for stuff" into real fleshed out systems that they reccomended before acting on. It was like having a engineer, strategist and COFOUNDER all in one. It did crucial actions but also crucial plans to fully form an idea. 
+### 1) BotWallet setup
 
+Copy env template:
 
-# basically: bots can be customers! 
-instead of blocking ai bots websites can charge them and let them buy access automatically. 
+```bash
+cp .env.example .env
+```
 
-payment systems, front end with buttons are designed for humans and bots cannot buy stuff. usually they clog traffic, scrape websites and are annoying. what if they were paying customers? Now bots can buy information (news articles), even clothes, aeroplane tickets, anything!
+Set Pinch test credentials in .env:
+- PINCH_CLIENT_ID
+- PINCH_CLIENT_SECRET
+- PINCH_PUBLISHABLE_KEY
+- VITE_PINCH_PUBLISHABLE_KEY
+- PINCH_ENV=test
 
+Install and run BotWallet:
 
-BotWallet is an autonomous AI agent that can research, compare options, and complete approved purchases. It follows the user’s spending rules, daily budget, and auto-approval limits through Pinch Payments.
+```bash
+npm install
+npm run dev
+```
 
-## Run locally
+BotWallet frontend: http://localhost:5173
+BotWallet backend: http://localhost:8000
 
-1. Copy `.env.example` to `.env` and add your Pinch **test** credentials from the Developer Portal. `VITE_PINCH_PUBLISHABLE_KEY` must be a public `pk_…` key; never place the client secret in a Vite variable.
-2. Install packages: `npm install`
-3. Start the app: `npm run dev`
-4. Open `http://localhost:5173`.
+### 2) BotNews setup
 
-## Run the terminal demo
+In a second terminal:
 
-With BotWallet running and BotNews started from `/Users/melinda/Desktop/BotNews` (`npm run dev`), run:
+```bash
+cd BotNews
+npm install
+npm run dev
+```
+
+BotNews: http://localhost:3001
+Dashboard: http://localhost:3001/dashboard
+
+### 3) CLI demo
+
+From repo root:
 
 ```bash
 npm run demo:agent
+npm run demo:agent -- --pay
 ```
 
-The standalone [`agent.ts`](./agent.ts) requests a BotNews premium article, handles its `402 Payment Required` offer, obtains approval through BotWallet, records the approved payment with BotNews, and retries the article request. Optional environment variables: `BOTNEWS_URL`, `BOTWALLET_URL`, `REPORT_ID`, `AGENT_ID`, and `WALLET_USER_ID`.
+Optional CLI environment overrides:
+- BOTNEWS_URL
+- BOTWALLET_URL
+- REPORT_ID
+- AGENT_ID
+- WALLET_USER_ID
 
-The application uses the documented Pinch flow:
+## API routes (BotWallet)
 
-1. `ConnectWalletModal` loads CaptureJS with its published SRI hash.
-2. Card fields are tokenised in the browser with `Pinch.Capture({ publishableKey }).createToken(...)`.
-3. Only the short-lived token is sent to `POST /api/pinch/connect-wallet`.
-4. The server obtains an OAuth client-credentials token, creates the Payer once, then adds a `credit-card` Payment Source. It stores only Pinch IDs—never PAN, expiry, or CVC.
-5. A budget-approved research request calls Pinch’s realtime payment endpoint with the stored Payer and source IDs.
+- GET /api/pinch/wallet
+- POST /api/pinch/connect-wallet
+- PATCH /api/pinch/wallet
+- POST /api/agent/purchase-premium
+- POST /api/agent/unlock-premium
 
-## API routes
+unlock-premium performs the end-to-end BotNews integration:
+- Reads the BotNews offer (402)
+- Applies budget/approval rules
+- Charges via Pinch
+- Calls BotNews settlement endpoint
+- Retries and returns unlocked content
 
-- `GET /api/pinch/wallet` — wallet status and recent purchases
-- `POST /api/pinch/connect-wallet` — accepts `{ "creditCardToken": "…" }`
-- `PATCH /api/pinch/wallet` — saves `{ "dailyLimitCents", "autoApproveCents" }`
-- `POST /api/agent/purchase-premium` — makes the $1.00 realtime purchase after enforcing wallet rules
+## Environment variables
 
-The included `authenticatedUserId` is a deliberately small demo adapter (defaults to `demo-user`, or accepts `X-User-Id`). Replace it with the project’s actual session/JWT identity before deployment. `server/wallets.json` is local demo persistence; use an encrypted production database and secrets manager in production.
+Root .env uses:
+- PINCH_CLIENT_ID
+- PINCH_CLIENT_SECRET
+- PINCH_PUBLISHABLE_KEY
+- VITE_PINCH_PUBLISHABLE_KEY
+- PINCH_ENV
+- BOTNEWS_BASE_URL (default http://localhost:3001)
+- BOTNEWS_DEFAULT_REPORT_ID (default market-report-001)
+- BOTWALLET_ALLOWED_ORIGINS (optional)
+- BOTWALLET_DEV_API_PROXY (optional local dev proxy override)
+- VITE_BOTWALLET_API_BASE_URL (optional when frontend and backend are hosted separately)
+- PORT
 
-Run `npm run build` to produce the Vite client bundle and compiled Express server; then use `NODE_ENV=production npm start`.
+Never expose PINCH_CLIENT_SECRET in frontend variables.
+
+## Deploy to Vercel
+
+Deploy as two Vercel projects from the same GitHub repository.
+
+### Project A: BotWallet
+
+- Root directory: repository root
+- Uses vercel.json at root
+- Build command: npm run build
+- Output directory: dist
+
+Set BotWallet environment variables in Vercel:
+- PINCH_CLIENT_ID
+- PINCH_CLIENT_SECRET
+- PINCH_ENV=test
+- VITE_PINCH_PUBLISHABLE_KEY
+- BOTNEWS_BASE_URL=https://YOUR-BOTNEWS-URL.vercel.app
+- BOTWALLET_ALLOWED_ORIGINS=https://YOUR-BOTWALLET-URL.vercel.app
+
+### Project B: BotNews
+
+- Root directory: BotNews
+- Uses BotNews/vercel.json
+- No secrets required for current demo implementation
+
+After deploy:
+1. Copy public BotNews URL.
+2. Set BOTNEWS_BASE_URL in BotWallet Vercel project.
+3. Redeploy BotWallet.
+
+## Notes for judges/demo
+
+- BotWallet web UI can run the premium unlock flow publicly.
+- BotNews is publicly browsable and exposes premium report APIs.
+- CLI demo still works locally with default localhost URLs or public URL overrides.
+- Wallet persistence is file-based locally and memory-backed when deployed on read-only serverless filesystem.

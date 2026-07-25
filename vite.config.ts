@@ -5,5 +5,10 @@ export default defineConfig({
   plugins: [react()],
   root: 'client',
   build: { outDir: '../dist', emptyOutDir: true },
-  server: { port: 5173, proxy: { '/api': 'http://localhost:8000' } }
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': process.env.BOTWALLET_DEV_API_PROXY || 'http://localhost:8000'
+    }
+  }
 });
