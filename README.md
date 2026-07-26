@@ -1,4 +1,5 @@
 # BotWallet (Pinch)
+https://botnews-pinch.vercel.app/
 
 BotWallet is an AI customer wallet demo for autonomous commerce.
 
