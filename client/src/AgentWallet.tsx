@@ -1,21 +1,24 @@
 import { FormEvent, useEffect, useState } from 'react';
 import type { Wallet } from './types';
 
-interface Props { wallet: Wallet; onConnect: () => void; onUpdateRules: (dailyLimitCents: number, autoApproveCents: number) => Promise<void>; }
+interface Props { wallet: Wallet; onConnect: () => void; onUpdateRules: (dailyLimitCents: number, autoApproveCents: number) => Promise<void>; shippingAddress: string; onShippingAddressChange: (value: string) => void; }
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
-export function AgentWallet({ wallet, onConnect, onUpdateRules }: Props) {
+export function AgentWallet({ wallet, onConnect, onUpdateRules, shippingAddress, onShippingAddressChange }: Props) {
   const remaining = wallet.dailyLimitCents - wallet.todaySpendCents;
   const [dailyBudget, setDailyBudget] = useState((wallet.dailyLimitCents / 100).toFixed(2));
   const [autoApproveLimit, setAutoApproveLimit] = useState((wallet.autoApproveCents / 100).toFixed(2));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [addressDraft, setAddressDraft] = useState(shippingAddress);
+  const [addressSaved, setAddressSaved] = useState(Boolean(shippingAddress));
   useEffect(() => {
     setDailyBudget((wallet.dailyLimitCents / 100).toFixed(2));
     setAutoApproveLimit((wallet.autoApproveCents / 100).toFixed(2));
     setSuccess('');
   }, [wallet.dailyLimitCents, wallet.autoApproveCents]);
+  useEffect(() => { setAddressDraft(shippingAddress); setAddressSaved(Boolean(shippingAddress)); }, [shippingAddress]);
 
   const currentDailyBudget = (wallet.dailyLimitCents / 100).toFixed(2);
   const currentAutoApproveLimit = (wallet.autoApproveCents / 100).toFixed(2);
@@ -41,7 +44,15 @@ export function AgentWallet({ wallet, onConnect, onUpdateRules }: Props) {
     finally { setSaving(false); }
   }
 
+  function saveAddress() {
+    if (addressDraft.trim().length < 8) { setError('Enter a complete delivery address before saving it.'); return; }
+    onShippingAddressChange(addressDraft.trim());
+    setAddressSaved(true);
+    setError('');
+  }
+
   return <aside className="wallet glass"><div className="wallet-title"><div><p className="eyebrow">AUTONOMOUS COMMERCE</p><h2>Bot Limit</h2><p className="wallet-subtitle">Adjust the daily budget and auto-approval threshold for your connected agent.</p></div><span className={wallet.walletConnected ? 'status connected' : 'status'}>{wallet.walletConnected ? '● Connected via Pinch' : '○ Disconnected'}</span></div>
+    <div className="shipping-address"><label htmlFor="delivery-address">Delivery address for physical orders</label><textarea id="delivery-address" value={addressDraft} onChange={(event) => { setAddressDraft(event.target.value); setAddressSaved(false); }} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); saveAddress(); } }} placeholder="Name, street, suburb, state, postcode" rows={3} /><div className="address-actions"><span>{addressSaved ? '✓ Address saved for checkout' : 'Save before ordering merch'}</span><button type="button" onClick={saveAddress} disabled={addressSaved}>Save address</button></div></div>
     {!wallet.walletConnected ? <div className="empty-wallet"><div className="wallet-icon">◒</div><h3>No payment method connected.</h3><p>Connect your card to allow your AI agent to purchase premium content using Pinch.</p><button onClick={onConnect}>Connect Wallet</button></div> : <>
       <button className="change-wallet" type="button" onClick={onConnect}>Change wallet</button>
       <form className="wallet-rules" id="wallet-rules" onSubmit={saveRules}>

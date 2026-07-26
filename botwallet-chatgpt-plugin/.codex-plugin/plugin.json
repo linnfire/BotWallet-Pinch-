@@ -1,0 +1,18 @@
+{
+  "name": "botwallet-chatgpt-plugin",
+  "version": "0.1.0",
+  "description": "A lightweight helper for explaining and operating the BotWallet demo.",
+  "author": {
+    "name": "Local developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "BotWallet ChatGPT Plugin",
+    "shortDescription": "Explain the BotWallet demo and its purchase flows.",
+    "longDescription": "A small local helper for describing BotWallet, Bot Limit, BotNews and Pinch Merch demo flows.",
+    "developerName": "Local developer",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Explain the BotWallet demo flow or help me prepare it for a presentation."
+  }
+}

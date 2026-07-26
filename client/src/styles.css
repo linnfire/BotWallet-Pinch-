@@ -116,6 +116,8 @@ body {
   background: rgba(96, 165, 250, 0.19);
 }
 
+.receipts-history { margin-top: 5px; }.receipts-history .history-item { display: grid; gap: 3px; }.receipts-history .history-item small, .receipt-empty { color: #8fa4c9; font-size: 10px; }.receipt-empty { padding: 4px 10px; }
+
 .sidebar-footer {
   margin-top: auto;
   border-top: 1px solid rgba(255, 255, 255, 0.11);
@@ -151,8 +153,11 @@ body {
 .conversation header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  position: relative;
 }
+
+.hero-heading { display: flex; align-items: flex-start; gap: 20px; }.title-branding { position: absolute; left: clamp(365px, 62%, 650px); top: -32px; z-index: 1; pointer-events: none; }.title-mascot { width: 264px; height: 210px; object-fit: contain; filter: drop-shadow(0 14px 28px rgba(59,91,204,.25)); }
 
 .conversation h1,
 .wallet h2 {
@@ -220,6 +225,10 @@ body {
   border-radius: 17px 17px 5px 17px;
   line-height: 1.6;
   box-shadow: 0 10px 30px rgba(28, 53, 94, 0.08);
+}
+
+.messages > .message.assistant:first-child {
+  margin-top: 19px;
 }
 
 .bot {
@@ -414,6 +423,24 @@ body {
   animation: checkPop 0.25s ease;
 }
 
+.news-preview, .merch-picker, .receipt-card { border-radius: 16px; padding: 14px; }
+.news-preview-head, .merch-picker-head { display: flex; gap: 10px; align-items: center; }
+.news-preview-head > span, .merch-picker-head > span { color: var(--brand); font-size: 18px; }
+.news-preview-head b, .merch-picker-head b { display: block; font-size: 13px; }
+.news-preview-head small, .merch-picker-head small { color: var(--ink-muted); font-size: 11px; }
+.news-rail, .merch-rail { display: flex; gap: 10px; overflow-x: auto; padding: 13px 1px 6px; scroll-snap-type: x proximity; }
+.news-rail article { flex: 0 0 220px; display: grid; gap: 6px; font-size: 12px; color: var(--ink-soft); }
+.news-rail img { width: 220px; height: 145px; object-fit: cover; border-radius: 10px; filter: saturate(.55) brightness(.82); }
+.news-rail article.selected img { filter: none; outline: 2px solid var(--brand); box-shadow: 0 0 20px rgba(37,99,235,.34); animation: sourceGlow 1.4s ease-in-out infinite alternate; }
+.news-rail small { color: var(--ink-muted); font-size: 11px; }
+.news-preview > p { margin: 3px 0 0; color: var(--ink-muted); font-size: 11px; }.news-preview > p span { color: var(--brand); margin-left: 4px; }
+.merch-option { flex: 0 0 215px; scroll-snap-align: start; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.76); }
+.merch-option img { display: block; width: 100%; height: 210px; object-fit: cover; }
+.merch-option > div { padding: 10px; display: grid; gap: 5px; }.merch-option b { font-size: 12px; }.merch-option small { color: var(--ink-muted); font-size: 10px; }.merch-option button { border: 0; border-radius: 8px; background: var(--brand); color: #fff; padding: 8px; font: 700 11px var(--font-ui); cursor: pointer; }.merch-option button:disabled { opacity: .5; }
+.receipt-card { max-width: 360px; background: #fffdf8; border: 1px dashed rgba(27,49,91,.38); box-shadow: 0 12px 30px rgba(20,40,75,.1); font-family: var(--font-mono); }
+.receipt-logo { font-size: 11px; color: var(--brand); }.receipt-card h3 { margin: 13px 0 7px; font: 800 22px var(--font-ui); }.receipt-card p { color: var(--ink-soft); font: 12px/1.5 var(--font-ui); }.receipt-card > div { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px dashed var(--line); font-size: 11px; }.receipt-card .receipt-address { display: grid; gap: 4px; }.receipt-card .receipt-address b { font: 11px/1.45 var(--font-ui); color: var(--ink-soft); white-space: pre-line; }.receipt-card .receipt-total { font-size: 13px; color: var(--brand); }.receipt-card small { color: var(--ink-muted); font-size: 9px; }
+@keyframes sourceGlow { to { box-shadow: 0 0 30px rgba(14,165,233,.6); } }
+
 .wallet {
   width: 100%;
   margin-top: 0;
@@ -428,18 +455,8 @@ body {
   margin-top: 10px;
 }
 
-.wallet-mascot-space {
-  min-height: 138px;
-  display: grid;
-  place-items: end center;
-  padding-bottom: 8px;
-}
+.wallet-pinch-brand { min-height: 138px; display: grid; place-items: end center; padding-bottom: 14px; }.wallet-pinch-brand img { width: 135px; height: auto; }
 
-.wallet-mascot-image {
-  width: 142px;
-  height: auto;
-  filter: drop-shadow(0 14px 30px rgba(59, 91, 204, 0.22));
-}
 
 .wallet-title {
   display: flex;
@@ -547,6 +564,8 @@ body {
 .threshold {
   margin-top: 9px;
 }
+
+.shipping-address { display: grid; gap: 6px; margin-top: 12px; font-size: 11px; color: var(--ink-soft); }.shipping-address textarea { width: 100%; resize: vertical; border: 1px solid rgba(27,49,91,.17); border-radius: 8px; padding: 9px; font: 11px/1.5 var(--font-ui); color: var(--ink); background: rgba(255,255,255,.75); outline-color: var(--brand); }.address-actions { display: flex; align-items: center; justify-content: space-between; gap: 9px; }.address-actions span { color: var(--ink-muted); font-size: 10px; }.address-actions button { border: 0; border-radius: 7px; background: var(--brand); color: #fff; padding: 7px 9px; font: 700 10px var(--font-ui); cursor: pointer; }.address-actions button:disabled { opacity: .55; cursor: default; }
 
 .wallet-actions {
   display: flex;
@@ -773,6 +792,8 @@ body {
     display: none;
   }
 
+  .title-branding { left: auto; right: 90px; transform: scale(.78); transform-origin: top right; }
+
   .wallet-title {
     padding-bottom: 8px;
   }
@@ -811,6 +832,8 @@ body {
   .conversation h1 {
     font-size: 27px;
   }
+
+  .title-branding { display: none; }
 
   .messages {
     padding-top: 28px;

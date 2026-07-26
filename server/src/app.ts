@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import path from 'node:path';
-import { connectWallet, purchasePremiumContent, unlockPremiumReport, updateWalletRules, walletStatus } from './pinch.controller.js';
+import { connectWallet, disconnectWallet, purchasePremiumContent, unlockPremiumReport, updateWalletRules, walletStatus } from './pinch.controller.js';
 import { allowedCorsOrigins } from './config.js';
 
 export const app = express();
@@ -12,6 +12,7 @@ app.use(express.json({ limit: '16kb' }));
 
 app.get('/api/pinch/wallet', walletStatus);
 app.post('/api/pinch/connect-wallet', connectWallet);
+app.post('/api/pinch/disconnect', disconnectWallet);
 app.patch('/api/pinch/wallet', updateWalletRules);
 app.post('/api/agent/purchase-premium', purchasePremiumContent);
 app.post('/api/agent/unlock-premium', unlockPremiumReport);

@@ -71,6 +71,16 @@ Optional CLI environment overrides:
 - AGENT_ID
 - WALLET_USER_ID
 
+### 4) Pinch Merch storefront
+
+The supplied-image merch site is in [`pinchmerch/`](./pinchmerch). With BotWallet running, start it with:
+
+```bash
+npm run dev:pinchmerch
+```
+
+Open http://localhost:5174. The three shirt buttons make a $50.00 AUD purchase through the connected Bot Limit; increase its daily and auto-approve rules first if necessary.
+
 ## API routes (BotWallet)
 
 - GET /api/pinch/wallet

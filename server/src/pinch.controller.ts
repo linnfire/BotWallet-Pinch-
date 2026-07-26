@@ -6,6 +6,11 @@ import { getWallet, saveWallet } from './store.js';
 
 const DAILY_LIMIT_CENTS = 500;
 const AUTO_APPROVE_CENTS = 10;
+const merchProducts = {
+  'da-pinchy-coder': { amountCents: 1100, description: 'Pinch Merch: Da Pinchy Coder T-Shirt (shirt $0.00 + shipping $11.00)' },
+  'pinch-pacman': { amountCents: 1100, description: 'Pinch Merch: Pinch Pacman T-Shirt (shirt $0.00 + shipping $11.00)' },
+  'sticker-stacker': { amountCents: 1100, description: 'Pinch Merch: Sticker Stacker T-Shirt (shirt $0.00 + shipping $11.00)' }
+} as const;
 
 type PaymentOffer = {
   merchant: string;
@@ -48,6 +53,17 @@ export function walletStatus(request: Request, response: Response) {
   return response.json({ walletConnected: true, dailyLimitCents: wallet.dailyLimitCents, autoApproveCents: wallet.autoApproveCents, todaySpendCents: todaySpend(wallet), purchases: wallet.purchases.slice(-5).reverse() });
 }
 
+/** A browser session never retains an active payment source after reload. */
+export async function disconnectWallet(request: Request, response: Response) {
+  const userId = authenticatedUserId(request);
+  const wallet = getWallet(userId);
+  if (wallet?.sourceId) {
+    wallet.sourceId = '';
+    await saveWallet(userId, wallet);
+  }
+  return response.json({ success: true });
+}
+
 export async function updateWalletRules(request: Request, response: Response) {
   const dailyLimitCents = request.body?.dailyLimitCents;
   const autoApproveCents = request.body?.autoApproveCents;
@@ -70,13 +86,20 @@ export async function updateWalletRules(request: Request, response: Response) {
 export async function purchasePremiumContent(request: Request, response: Response) {
   const userId = authenticatedUserId(request);
   const wallet = getWallet(userId);
-  const amountCents = 100;
+  const merchSku = request.body?.merchSku;
+  const merchProduct = typeof merchSku === 'string' ? merchProducts[merchSku as keyof typeof merchProducts] : undefined;
+  if (merchSku && !merchProduct) return response.status(400).json({ error: 'Unknown Pinch Merch item.' });
+  if (merchProduct && (typeof request.body?.shippingAddress !== 'string' || request.body.shippingAddress.trim().length < 8)) {
+    return response.status(400).json({ error: 'Add a delivery address before ordering physical merch.' });
+  }
+  const amountCents = merchProduct?.amountCents ?? 100;
+  const description = merchProduct?.description ?? 'BotWallet: BotNews premium article';
   if (!wallet?.sourceId) return response.status(409).json({ error: 'Connect Bot Limit before making purchases.' });
   if (amountCents > wallet.autoApproveCents) return response.status(403).json({ error: 'This purchase exceeds the auto-approval threshold.' });
   if (todaySpend(wallet) + amountCents > wallet.dailyLimitCents) return response.status(403).json({ error: 'This purchase exceeds the daily Bot Limit budget.' });
   try {
-    const payment = await createRealtimePayment(wallet.payerId, wallet.sourceId, amountCents, 'BotWallet: BotNews premium article');
-    const purchase = { id: payment.id, description: 'BotNews premium article', amountCents, createdAt: new Date().toISOString() };
+    const payment = await createRealtimePayment(wallet.payerId, wallet.sourceId, amountCents, description);
+    const purchase = { id: payment.id, description: merchProduct?.description.replace('Pinch Merch: ', '') ?? 'BotNews premium article', amountCents, createdAt: new Date().toISOString() };
     wallet.purchases.push(purchase);
     await saveWallet(userId, wallet);
     return response.json({ success: true, purchase, wallet: { todaySpendCents: todaySpend(wallet), remainingCents: wallet.dailyLimitCents - todaySpend(wallet) } });

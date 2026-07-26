@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#08080c" />
+    <title>Pinch Merch — I Want 50K</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main>
+      <section class="hero" aria-label="Pinch Merch hero">
+        <img src="./assets/pinchme-hero.png" alt="Pinch Me. I Want 50K campaign" />
+        <a class="shop-link" href="#shop">Shop all <span>→</span></a>
+      </section>
+
+      <section class="catalogue" id="shop" aria-labelledby="shop-title">
+        <div class="section-heading"><p>PINCH MERCH / DROP 01</p><h1 id="shop-title">I WANT 50K</h1><span>Three shirts. One very serious ambition.</span></div>
+        <img class="catalogue-shot" src="./assets/pinchmerch-catalogue.png" alt="Pinch Merch T-shirt collection" />
+        <div class="products">
+          <article class="product-card"><img src="./assets/da-pinchy-coder.png" alt="Da Pinchy Coder T-Shirt" /><div><h2>Da Pinchy Coder T-Shirt</h2><p>Shirt $0.00 · Shipping $11.00 AUD</p><button data-sku="da-pinchy-coder">Buy with BotWallet</button></div></article>
+          <article class="product-card"><img src="./assets/pinch-pacman.png" alt="Pinch Pacman T-Shirt" /><div><h2>Pinch Pacman T-Shirt</h2><p>Shirt $0.00 · Shipping $11.00 AUD</p><button data-sku="pinch-pacman">Buy with BotWallet</button></div></article>
+          <article class="product-card"><img src="./assets/sticker-stacker.png" alt="Sticker Stacker T-Shirt" /><div><h2>Sticker Stacker T-Shirt</h2><p>Shirt $0.00 · Shipping $11.00 AUD</p><button data-sku="sticker-stacker">Buy with BotWallet</button></div></article>
+        </div>
+        <p class="purchase-status" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>

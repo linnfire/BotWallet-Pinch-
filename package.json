@@ -7,6 +7,7 @@
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "tsx watch server/src/index.ts",
     "dev:client": "vite",
+    "dev:pinchmerch": "vite pinchmerch --port 5174",
     "demo:agent": "tsx agent.ts",
     "build": "tsc --noEmit && vite build && tsc -p tsconfig.server.json",
     "start": "node server/dist/index.js"

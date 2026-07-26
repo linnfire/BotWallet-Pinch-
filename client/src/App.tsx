@@ -3,7 +3,10 @@ import { AgentWallet } from './AgentWallet';
 import { ActivityFeed } from './ActivityFeed';
 import { api } from './api';
 import { ConnectWalletModal } from './ConnectWalletModal';
-import type { Activity, ChatMessage, Wallet } from './types';
+import { MerchPicker } from './MerchPicker';
+import { NewsPreview } from './NewsPreview';
+import { ReceiptCard } from './ReceiptCard';
+import type { Activity, ChatMessage, MerchItem, Wallet } from './types';
 
 const initialWallet: Wallet = {
   walletConnected: false,
@@ -30,6 +33,8 @@ export default function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [queryCount, setQueryCount] = useState(0);
+  const [shippingAddress, setShippingAddress] = useState('');
 
   const refreshWallet = async () => {
     try {
@@ -43,13 +48,11 @@ export default function App() {
     setWallet(await api.updateWalletRules(dailyLimitCents, autoApproveCents));
   };
 
-  useEffect(() => {
-    void refreshWallet();
-  }, []);
+  useEffect(() => { void (async () => { await api.disconnectWallet(); await refreshWallet(); })(); }, []);
 
-  const add = (role: ChatMessage['role'], text: string, activity?: Activity) => {
+  const add = (role: ChatMessage['role'], text: string, activity?: Activity, extras: Partial<ChatMessage> = {}) => {
     const id = crypto.randomUUID();
-    setMessages((current) => [...current, { id, role, text, activity }]);
+    setMessages((current) => [...current, { id, role, text, activity, ...extras }]);
     return id;
   };
 
@@ -65,13 +68,15 @@ export default function App() {
     setError('');
     add('user', input);
     setInput('');
+    if (queryCount > 0) { setQueryCount((count) => count + 1); await showMerchChoices(); setBusy(false); return; }
+    setQueryCount(1);
 
     const activityId = add('activity', '', {
       title: 'BotWallet is researching...',
       steps: [{ label: 'Searching sources...', status: 'active' }]
     });
 
-    await pause(360);
+    await pause(900);
     updateActivity(activityId, {
       title: 'BotWallet is researching...',
       steps: [
@@ -80,7 +85,7 @@ export default function App() {
       ]
     });
 
-    await pause(360);
+    await pause(900);
     updateActivity(activityId, {
       title: 'BotWallet is researching...',
       steps: [
@@ -90,7 +95,7 @@ export default function App() {
       ]
     });
 
-    await pause(360);
+    await pause(1000);
     updateActivity(activityId, {
       title: 'BotWallet is researching...',
       steps: [
@@ -101,7 +106,9 @@ export default function App() {
       ]
     });
 
-    await pause(650);
+    add('preview', '');
+
+    await pause(1500);
     const permissionSteps: Activity['steps'] = [
       { label: 'Searching sources...', detail: 'Reuters, NYT, BBC', status: 'complete' },
       { label: 'BotNews requires payment', detail: '$1.00 unlock available', status: 'locked' },
@@ -113,7 +120,7 @@ export default function App() {
       steps: permissionSteps
     });
 
-    await pause(500);
+    await pause(750);
     if (!wallet.walletConnected) {
       updateActivity(activityId, {
         title: 'BotWallet needs your approval',
@@ -157,7 +164,7 @@ export default function App() {
         ]
       });
 
-      await pause(450);
+      await pause(700);
       add(
         'assistant',
         `Premium report unlocked from BotNews\n\n${unlocked.report.title}\n\n${unlocked.report.content}`
@@ -177,6 +184,41 @@ export default function App() {
     }
   }
 
+  async function showMerchChoices() {
+    const activityId = add('activity', '', { title: 'BotWallet is finding physical items...', steps: [{ label: 'Searching Pinch Merch', status: 'active' }] });
+    await pause(950);
+    updateActivity(activityId, { title: 'BotWallet is comparing merch sources...', steps: [{ label: 'Searching Pinch Merch', status: 'complete' }, { label: 'Scanning Shopify drops', detail: 'Techwear and developer collections', status: 'active' }] });
+    await pause(950);
+    updateActivity(activityId, { title: 'BotWallet is comparing merch sources...', steps: [{ label: 'Searching Pinch Merch', status: 'complete' }, { label: 'Scanning Shopify drops', detail: 'Techwear and developer collections', status: 'complete' }, { label: 'Checking hacker and hoodie stores', status: 'active' }] });
+    await pause(950);
+    updateActivity(activityId, { title: 'BotWallet is narrowing the shortlist...', steps: [{ label: 'Searching Pinch Merch', status: 'complete' }, { label: 'Scanning Shopify drops', detail: 'Techwear and developer collections', status: 'complete' }, { label: 'Checking hacker and hoodie stores', status: 'complete' }, { label: 'Comparing cool technical shirts', status: 'active' }] });
+    await pause(950);
+    updateActivity(activityId, { title: 'BotWallet found the best merch match', steps: [{ label: 'Searching Pinch Merch', status: 'complete' }, { label: 'Scanning Shopify drops', detail: 'Techwear and developer collections', status: 'complete' }, { label: 'Checking hacker and hoodie stores', status: 'complete' }, { label: 'Comparing cool technical shirts', status: 'complete' }, { label: 'Pinch Merch free shirt drop found', detail: 'Shirt $0.00 · shipping $11.00 AUD', status: 'active' }] });
+    await pause(1100);
+    updateActivity(activityId, { title: 'BotWallet found a free merch drop', steps: [{ label: 'Searching Pinch Merch', status: 'complete' }, { label: 'Scanning Shopify drops', detail: 'Techwear and developer collections', status: 'complete' }, { label: 'Checking hacker and hoodie stores', status: 'complete' }, { label: 'Comparing cool technical shirts', status: 'complete' }, { label: 'Pinch Merch free shirt drop found', detail: 'Choose a shirt to ship for $11.00 AUD', status: 'complete' }] });
+    add('merch', '', undefined, { merch: [
+      { sku: 'da-pinchy-coder', title: 'Da Pinchy Coder', image: '/da-pinchy-coder-shirt.png' },
+      { sku: 'pinch-pacman', title: 'Pinch Pacman', image: '/pinch-pacman-shirt.png' },
+      { sku: 'sticker-stacker', title: 'Sticker Stacker', image: '/sticker-stacker-shirt.png' }
+    ] });
+  }
+
+  async function purchaseMerch(item: MerchItem) {
+    if (!shippingAddress.trim()) { setError('Add your shipping address in Bot Limit before choosing a physical item.'); return; }
+    if (!wallet.walletConnected) { setModalOpen(true); setError('Connect Bot Limit to pay the $11.00 shipping charge.'); return; }
+    setBusy(true); setError('');
+    const activityId = add('activity', '', { title: 'BotWallet is preparing your shipment...', steps: [{ label: `${item.title} selected`, detail: 'Item price $0.00 AUD', status: 'complete' }, { label: 'Checking Bot Limit for $11.00 shipping', status: 'active' }] });
+    await pause(700);
+    try {
+      const paid = await api.purchaseMerch(item.sku, shippingAddress);
+      await refreshWallet();
+      updateActivity(activityId, { title: 'BotWallet completed your merch order', steps: [{ label: `${item.title} reserved`, detail: 'Free Pinch Merch item', status: 'complete' }, { label: 'Shipping paid with Pinch', detail: '$11.00 AUD', status: 'complete' }, { label: 'Delivery address confirmed', status: 'complete' }] });
+      add('assistant', `✓ ${item.title} is on its way. The shirt is free; Bot Limit paid the $11.00 AUD shipping charge.`);
+      add('receipt', '', undefined, { receipt: { ...paid.purchase, shippingAddress } });
+    } catch (caught) { setError(caught instanceof Error ? caught.message : 'The merch order could not be completed.'); }
+    finally { setBusy(false); }
+  }
+
   return (
     <main className="app-shell">
       <nav className="sidebar">
@@ -190,6 +232,10 @@ export default function App() {
           <button className="history-item">Find the best laptop</button>
           <button className="history-item">Weekend travel plan</button>
         </div>
+        <div className="history receipts-history">
+          <p>PAST RECEIPTS</p>
+          {wallet.purchases.length ? wallet.purchases.slice(-3).reverse().map((purchase) => <button className="history-item" key={purchase.id}>{purchase.description}<small>${(purchase.amountCents / 100).toFixed(2)} AUD</small></button>) : <span className="receipt-empty">No purchases yet</span>}
+        </div>
         <div className="sidebar-footer">
           <span className="avatar">AO</span>
           <span>
@@ -201,9 +247,12 @@ export default function App() {
 
       <section className="conversation">
         <header>
-          <div>
+          <div className="hero-heading">
+            <div>
             <p className="eyebrow">AUTONOMOUS COMMERCE AGENT</p>
             <h1>What can BotWallet do?</h1>
+            </div>
+            <div className="title-branding"><img className="title-mascot" src="/mascot1.gif" alt="BotWallet mascot" /></div>
           </div>
           <span className="model">
             Ready to act <i />
@@ -217,16 +266,13 @@ export default function App() {
         </div>
 
         <div className="messages">
-          {messages.map((message) =>
-            message.role === 'activity' && message.activity ? (
-              <ActivityFeed activity={message.activity} key={message.id} />
-            ) : (
-              <article className={`message ${message.role}`} key={message.id}>
-                {message.role === 'assistant' && <span className="bot">◈</span>}
-                <p>{message.text}</p>
-              </article>
-            )
-          )}
+          {messages.map((message) => {
+            if (message.role === 'activity' && message.activity) return <ActivityFeed activity={message.activity} key={message.id} />;
+            if (message.role === 'preview') return <NewsPreview key={message.id} />;
+            if (message.role === 'merch' && message.merch) return <MerchPicker key={message.id} items={message.merch} disabled={busy} onSelect={purchaseMerch} />;
+            if (message.role === 'receipt' && message.receipt) return <ReceiptCard key={message.id} receipt={message.receipt} />;
+            return <article className={`message ${message.role}`} key={message.id}>{message.role === 'assistant' && <span className="bot">◈</span>}<p>{message.text}</p></article>;
+          })}
           {busy && (
             <span className="typing">
               BotWallet is working
@@ -252,10 +298,8 @@ export default function App() {
       </section>
 
       <aside className="wallet-column">
-        <div className="wallet-mascot-space">
-          <img className="wallet-mascot-image" src="/mascot1.gif" alt="Agent mascot" />
-        </div>
-        <AgentWallet wallet={wallet} onConnect={() => setModalOpen(true)} onUpdateRules={updateWalletRules} />
+        <div className="wallet-pinch-brand"><img src="/pinch-logo.png" alt="Pinch" /></div>
+        <AgentWallet wallet={wallet} onConnect={() => setModalOpen(true)} onUpdateRules={updateWalletRules} shippingAddress={shippingAddress} onShippingAddressChange={setShippingAddress} />
       </aside>
 
       {modalOpen && <ConnectWalletModal onClose={() => setModalOpen(false)} onConnected={() => void refreshWallet()} />}
