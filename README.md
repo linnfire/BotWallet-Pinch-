@@ -1,34 +1,91 @@
 # BotWallet (Pinch)
 
-https://botnews-pinch.vercel.app/
+🌐 https://botnews-pinch.vercel.app/
 
-## Why Pinch matters
+> **AI agents can finally buy anything online. Websites can finally charge AI agents.**
 
-BotWallet is built around a simple idea:
+## Overview
 
-> **AI agents can become customers.**
+BotWallet is an autonomous commerce platform that enables AI agents to securely spend money on the internet within rules set by their owner.
 
-## Merchant SDK
+Today, AI assistants like ChatGPT, Claude and Grok can research, compare products and make recommendations, but they usually cannot complete purchases. Websites are designed for humans, with manual checkout flows that require clicking buttons and entering payment details.
 
-`@botwallet/merchant` is a local workspace package that demonstrates how any website or API can return a machine-readable HTTP 402 offer, verify a BotWallet receipt, and unlock a purchase after Pinch confirms payment.
+BotWallet solves this by becoming the payment layer between AI agents and merchants.
 
-Install from a neighbouring project:
+Using **Pinch**, BotWallet securely tokenises a user's payment method, enforces spending rules (Bot Limits), and allows approved purchases to happen automatically. Merchants receive payment through a standard HTTP payment flow without needing to build an entirely new payment system.
 
-```bash
-npm install ../BotWallet/packages/merchant-sdk
-```
+## Why this matters
 
-Within this repository, npm workspaces link the package automatically after `npm install`. It has not been published to npm, so `npm install @botwallet/merchant` only works inside this workspace until it is published under that scope.
+This creates value for all three parties:
 
-Core flow:
-1. Agent requests premium content from BotNews.
-2. BotNews returns HTTP 402 Payment Required with a machine-readable offer.
-3. BotWallet validates Bot Limit budget rules.
-4. BotWallet charges through Pinch.
-5. BotWallet settles purchase with BotNews.
-6. Agent retries and receives premium content.
+### 👤 Users
 
-See [`merchant-protocol.md`](./merchant-protocol.md) for the reusable resource contract for merchants offering paid articles, APIs, downloads, subscriptions, tickets, or physical products.
+Instead of spending time researching and checking out manually, users can simply say:
+
+> *"Find me the best ski trip under $2,000 and book everything."*
+
+BotWallet searches, compares options and purchases them automatically within the user's spending rules.
+
+### 🏪 Merchants
+
+Today, AI bots generate significant website traffic but very little revenue.
+
+BotWallet turns AI agents into paying customers.
+
+Instead of blocking bots, merchants can monetise them by exposing machine-readable payment offers that AI agents can purchase automatically.
+
+### 💳 Pinch
+
+Every autonomous purchase is processed through Pinch.
+
+As AI agents become more common, Pinch has the opportunity to power an entirely new category of customer—the AI customer.
+
+That means:
+
+- More payment volume
+- More merchants using Pinch
+- Valuable insights into the emerging agent economy
+- An opportunity to become an early payment infrastructure provider for autonomous commerce
+
+## Why it's innovative
+
+Rather than inventing a new currency or relying on crypto, BotWallet builds on existing web standards.
+
+Merchants simply return an **HTTP 402 Payment Required** response containing a machine-readable payment offer.
+
+BotWallet automatically:
+
+1. Reads the payment offer.
+2. Checks the user's Bot Limits.
+3. Processes payment securely through Pinch.
+4. Returns proof of payment.
+5. Unlocks the purchased resource.
+
+This allows any HTTP-based website or API to support AI customers with minimal changes.
+
+## Demo
+
+This repository demonstrates the complete end-to-end flow.
+
+- ✅ Connect a payment method through Pinch
+- ✅ Tokenise card details securely
+- ✅ Configure spending rules
+- ✅ Request paid content from a merchant
+- ✅ Receive an HTTP 402 payment offer
+- ✅ Automatically pay through Pinch
+- ✅ Unlock the purchased resource
+- ✅ Retry and receive the paid content
+
+The included demos show this working across:
+
+- BotNews (premium content)
+- Pinch Merch (physical products)
+- ChatGPT via MCP
+- Merchant SDK for third-party websites
+
+---
+
+# Merchant SDK
 
 
 
