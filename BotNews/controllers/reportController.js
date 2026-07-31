@@ -1,7 +1,10 @@
 const { allReports, findReport } = require('../models/reportModel');
 const purchaseService = require('../services/purchaseService');
 const analytics = require('../services/analyticsService');
-const { create402Offer } = require('@botwallet/merchant');
+
+function create402Offer({ merchant, resourceId, title, priceInCents, currency, paymentProvider }) {
+  return { merchant, resourceId, title, priceInCents, currency, paymentProvider };
+}
 
 function agentId(req) { return req.get('x-agent-id') || req.body?.agentId || 'anonymous-agent'; }
 
