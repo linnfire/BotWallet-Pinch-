@@ -12,6 +12,8 @@ function summary() {
   const today = new Date().toDateString();
   const revenue = purchases.reduce((sum, event) => sum + event.amount, 0);
   const todayRevenue = purchases.filter((event) => new Date(event.createdAt).toDateString() === today).reduce((sum, event) => sum + event.amount, 0);
-  return { aiRequests: requests.length, successfulPurchases: purchases.length, revenueEarned: revenue, revenueToday: todayRevenue, recentTransactions: events.slice(0, 12) };
+  const conversionRate = requests.length ? Math.round((purchases.length / requests.length) * 100) : 0;
+  const highlightedResource = purchases[0]?.reportTitle || 'No paid resource highlighted yet';
+  return { aiRequests: requests.length, successfulPurchases: purchases.length, revenueEarned: revenue, revenueToday: todayRevenue, botTrafficPercent: 100, conversionRate, highlightedResource, recentTransactions: events.slice(0, 12) };
 }
 module.exports = { recordRequest, recordPurchase, summary };

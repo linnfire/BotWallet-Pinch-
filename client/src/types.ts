@@ -4,7 +4,9 @@ export type ActivityStatus = 'pending' | 'active' | 'complete' | 'locked' | 'att
 export interface ActivityStep { label: string; detail?: string; status: ActivityStatus; }
 export interface Activity { title: string; steps: ActivityStep[]; }
 export interface MerchItem { sku: string; title: string; image: string; }
-export interface Receipt { id: string; description: string; amountCents: number; shippingAddress?: string; }
-export interface ChatMessage { id: string; role: 'user' | 'assistant' | 'activity' | 'merch' | 'receipt' | 'preview'; text: string; activity?: Activity; merch?: MerchItem[]; receipt?: Receipt; }
+export interface Receipt { id: string; description: string; amountCents: number; shippingAddress?: string; kind?: 'merch' | 'travel' | 'service' | 'news'; merchant?: string; items?: Array<{ label: string; value?: string }>; bookedAt?: string; }
+export type AgentMode = 'research' | 'approval' | 'auto';
+export interface Approval { kind: 'news' | 'merch'; title: string; priceLabel: string; reason: string; merch?: MerchItem; }
+export interface ChatMessage { id: string; role: 'user' | 'assistant' | 'activity' | 'merch' | 'receipt' | 'preview' | 'approval' | 'intel' | 'travel' | 'services' | 'sources'; text: string; activity?: Activity; merch?: MerchItem[]; receipt?: Receipt; approval?: Approval; mode?: AgentMode; sources?: Array<{ title: string; uri: string }>; }
 declare global { interface Window { Pinch?: { Capture: (options: { publishableKey: string }) => { createToken: (card: CardDetails) => Promise<{ token: string }> } } } }
 export interface CardDetails { sourceType: 'credit-card'; cardNumber: string; expiryMonth: string; expiryYear: string; cvc: string; cardHolderName: string; }

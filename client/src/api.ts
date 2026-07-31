@@ -18,7 +18,9 @@ export const api = {
   connectWallet: (creditCardToken: string) => request<{ success: boolean; payerId: string; walletConnected: boolean }>('/api/pinch/connect-wallet', { method: 'POST', body: JSON.stringify({ creditCardToken }) }),
   disconnectWallet: () => request<{ success: boolean }>('/api/pinch/disconnect', { method: 'POST' }),
   updateWalletRules: (dailyLimitCents: number, autoApproveCents: number) => request<Wallet>('/api/pinch/wallet', { method: 'PATCH', body: JSON.stringify({ dailyLimitCents, autoApproveCents }) }),
+  plan: (goal: string) => request<{ merchant: 'botnews' | 'pinchmerch' | 'bottravel' | 'botservices'; intent: 'research' | 'purchase'; summary: string; reason: string; source: 'gemini' | 'fallback'; sources?: Array<{ title: string; uri: string }> }>('/api/agent/plan', { method: 'POST', body: JSON.stringify({ goal }) }),
   purchase: () => request<{ success: boolean; wallet: { todaySpendCents: number; remainingCents: number } }>('/api/agent/purchase-premium', { method: 'POST' }),
   purchaseMerch: (merchSku: string, shippingAddress: string) => request<{ success: boolean; purchase: { id: string; description: string; amountCents: number } }>('/api/agent/purchase-premium', { method: 'POST', body: JSON.stringify({ merchSku, shippingAddress }) }),
-  unlockPremiumReport: (reportId?: string) => request<{ success: boolean; report: { title: string; content: string } }>('/api/agent/unlock-premium', { method: 'POST', body: JSON.stringify(reportId ? { reportId } : {}) })
+  unlockPremiumReport: (reportId?: string) => request<{ success: boolean; report: { title: string; content: string } }>('/api/agent/unlock-premium', { method: 'POST', body: JSON.stringify(reportId ? { reportId } : {}) }),
+  checkoutBotMarket: (resourceId: string) => request<{ success: boolean; paymentStatus: string; merchant: string; purchase: { id: string; description: string; amountCents: number }; confirmation: { title: string; details: string } }>('/api/botmarket/checkout', { method: 'POST', body: JSON.stringify({ resourceId }) })
 };

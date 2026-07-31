@@ -3,6 +3,8 @@ import { authenticatedUserId, authenticatedUserProfile } from './auth.js';
 import { addCreditCardSource, createPayer, createRealtimePayment, PinchError } from './pinch.service.js';
 import { botNewsBaseUrl, defaultReportId } from './config.js';
 import { getWallet, saveWallet } from './store.js';
+import { createMerchantPlan } from './gemini.service.js';
+import type { BotMarketResource } from './botmarket.service.js';
 
 const DAILY_LIMIT_CENTS = 500;
 const AUTO_APPROVE_CENTS = 10;
@@ -51,6 +53,12 @@ export function walletStatus(request: Request, response: Response) {
   const wallet = getWallet(authenticatedUserId(request));
   if (!wallet?.sourceId) return response.json({ walletConnected: false, dailyLimitCents: DAILY_LIMIT_CENTS, autoApproveCents: AUTO_APPROVE_CENTS, todaySpendCents: 0, purchases: [] });
   return response.json({ walletConnected: true, dailyLimitCents: wallet.dailyLimitCents, autoApproveCents: wallet.autoApproveCents, todaySpendCents: todaySpend(wallet), purchases: wallet.purchases.slice(-5).reverse() });
+}
+
+export async function planRequest(request: Request, response: Response) {
+  const goal = request.body?.goal;
+  if (typeof goal !== 'string' || !goal.trim()) return response.status(400).json({ error: 'A request is required for planning.' });
+  return response.json(await createMerchantPlan(goal.trim()));
 }
 
 /** A browser session never retains an active payment source after reload. */
@@ -108,63 +116,87 @@ export async function purchasePremiumContent(request: Request, response: Respons
 
 export async function unlockPremiumReport(request: Request, response: Response) {
   const userId = authenticatedUserId(request);
-  const wallet = getWallet(userId);
-  if (!wallet?.sourceId) return response.status(409).json({ error: 'Connect Bot Limit before making purchases.' });
-
   const reportId = typeof request.body?.reportId === 'string' && request.body.reportId.trim() ? request.body.reportId.trim() : defaultReportId();
-  const botNewsUrl = botNewsBaseUrl();
   const agentId = request.header('x-agent-id') || `${userId}-agent`;
-  const reportUrl = `${botNewsUrl}/api/reports/${encodeURIComponent(reportId)}`;
+  try { return response.json(await unlockPremiumReportForUser(userId, reportId, agentId)); }
+  catch (error) { return sendUnlockError(response, error); }
+}
+
+/** Shared server-side payment flow for the UI, CLI and MCP server. */
+export async function unlockPremiumReportForUser(userId: string, reportId = defaultReportId(), agentId = `${userId}-agent`) {
+  const wallet = getWallet(userId);
+  if (!wallet?.sourceId) throw new WalletRuleError(409, 'Connect Bot Limit before making purchases.');
+  const botNewsUrl = botNewsBaseUrl();
+  const reportUrl = `${botNewsUrl}/api/reports/resources/${encodeURIComponent(reportId)}`;
 
   try {
     const initialResponse = await fetch(reportUrl, { headers: { 'x-agent-id': agentId } });
     if (initialResponse.ok) {
       const report = await initialResponse.json() as UnlockedReport;
-      return response.json({ success: true, alreadyUnlocked: true, report });
+      return { success: true, alreadyUnlocked: true, report };
     }
     if (initialResponse.status !== 402) {
-      return response.status(502).json({ error: `BotNews returned ${initialResponse.status} while requesting premium content.` });
+      throw new WalletRuleError(502, `BotNews returned ${initialResponse.status} while requesting premium content.`);
     }
 
     const offer = await initialResponse.json() as PaymentOffer;
     if (!Number.isSafeInteger(offer.priceInCents) || offer.priceInCents < 1) {
-      return response.status(502).json({ error: 'BotNews returned an invalid payment offer.' });
+      throw new WalletRuleError(502, 'BotNews returned an invalid payment offer.');
     }
 
     const spendToday = todaySpend(wallet);
-    if (offer.priceInCents > wallet.autoApproveCents) return response.status(403).json({ error: 'This purchase exceeds the auto-approval threshold.' });
-    if (spendToday + offer.priceInCents > wallet.dailyLimitCents) return response.status(403).json({ error: 'This purchase exceeds the daily Bot Limit budget.' });
+    if (offer.priceInCents > wallet.autoApproveCents) throw new WalletRuleError(403, 'This purchase exceeds the auto-approval threshold.');
+    if (spendToday + offer.priceInCents > wallet.dailyLimitCents) throw new WalletRuleError(403, 'This purchase exceeds the daily Bot Limit budget.');
 
     const payment = await createRealtimePayment(wallet.payerId, wallet.sourceId, offer.priceInCents, `BotWallet: ${offer.title}`);
     const purchase = { id: payment.id, description: offer.title, amountCents: offer.priceInCents, createdAt: new Date().toISOString() };
     wallet.purchases.push(purchase);
     await saveWallet(userId, wallet);
 
-    const settlementResponse = await fetch(`${reportUrl}/purchase`, {
+    const settlementResponse = await fetch(`${reportUrl}/settle`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-agent-id': agentId },
       body: JSON.stringify({ agentId })
     });
     if (!settlementResponse.ok) {
-      return response.status(502).json({ error: `BotNews settlement failed with ${settlementResponse.status}.` });
+      throw new WalletRuleError(502, `BotNews settlement failed with ${settlementResponse.status}.`);
     }
 
     const unlockedResponse = await fetch(reportUrl, { headers: { 'x-agent-id': agentId } });
     if (!unlockedResponse.ok) {
-      return response.status(502).json({ error: `BotNews did not unlock the report after payment (${unlockedResponse.status}).` });
+      throw new WalletRuleError(502, `BotNews did not unlock the report after payment (${unlockedResponse.status}).`);
     }
 
     const report = await unlockedResponse.json() as UnlockedReport;
-    return response.json({
+    return {
       success: true,
       report,
       offer,
       purchase,
       wallet: { todaySpendCents: todaySpend(wallet), remainingCents: wallet.dailyLimitCents - todaySpend(wallet) }
-    });
-  } catch (error) {
-    return sendPinchError(response, error);
-  }
+    };
+  } catch (error) { throw error; }
+}
+
+export class WalletRuleError extends Error { constructor(public readonly status: number, message: string) { super(message); } }
+
+/** Shared charge primitive for Bot Market merchant checkout. It uses the existing Pinch service and Bot Limit rules. */
+export async function purchaseBotMarketOrderForUser(userId: string, offer: BotMarketResource) {
+  const wallet = getWallet(userId);
+  if (!wallet?.sourceId) throw new WalletRuleError(409, 'Connect Bot Limit before making purchases.');
+  const spent = todaySpend(wallet);
+  if (offer.priceInCents > wallet.autoApproveCents) throw new WalletRuleError(403, 'This purchase exceeds the auto-approval threshold. Increase Bot Limit or use a smaller booking.');
+  if (spent + offer.priceInCents > wallet.dailyLimitCents) throw new WalletRuleError(403, 'This purchase exceeds the daily Bot Limit budget.');
+  const payment = await createRealtimePayment(wallet.payerId, wallet.sourceId, offer.priceInCents, `BotWallet: ${offer.title}`);
+  const purchase = { id: payment.id, description: `${offer.merchant}: ${offer.title}`, amountCents: offer.priceInCents, createdAt: new Date().toISOString() };
+  wallet.purchases.push(purchase);
+  await saveWallet(userId, wallet);
+  return { ...purchase, remainingCents: wallet.dailyLimitCents - todaySpend(wallet) };
+}
+
+function sendUnlockError(response: Response, error: unknown) {
+  if (error instanceof WalletRuleError) return response.status(error.status).json({ error: error.message });
+  return sendPinchError(response, error);
 }
 
 function sendPinchError(response: Response, error: unknown) {

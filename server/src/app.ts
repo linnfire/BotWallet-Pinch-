@@ -1,8 +1,10 @@
 import cors from 'cors';
 import express from 'express';
 import path from 'node:path';
-import { connectWallet, disconnectWallet, purchasePremiumContent, unlockPremiumReport, updateWalletRules, walletStatus } from './pinch.controller.js';
+import { connectWallet, disconnectWallet, planRequest, purchasePremiumContent, unlockPremiumReport, updateWalletRules, walletStatus } from './pinch.controller.js';
 import { allowedCorsOrigins } from './config.js';
+import { handleMcpRequest } from './mcp.js';
+import { checkoutBotMarketResource, getBotMarketResource } from './botmarket.controller.js';
 
 export const app = express();
 
@@ -14,8 +16,12 @@ app.get('/api/pinch/wallet', walletStatus);
 app.post('/api/pinch/connect-wallet', connectWallet);
 app.post('/api/pinch/disconnect', disconnectWallet);
 app.patch('/api/pinch/wallet', updateWalletRules);
+app.post('/api/agent/plan', planRequest);
 app.post('/api/agent/purchase-premium', purchasePremiumContent);
 app.post('/api/agent/unlock-premium', unlockPremiumReport);
+app.get('/api/botmarket/resources/:id', getBotMarketResource);
+app.post('/api/botmarket/checkout', checkoutBotMarketResource);
+app.post('/mcp', handleMcpRequest);
 
 const clientBuild = path.resolve(process.cwd(), 'dist');
 if (process.env.NODE_ENV === 'production') {

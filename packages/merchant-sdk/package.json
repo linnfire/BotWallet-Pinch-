@@ -1,0 +1,9 @@
+{
+  "name": "@botwallet/merchant",
+  "version": "0.1.0",
+  "description": "Local BotWallet merchant SDK for 402 offers and paid-resource unlocks.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": ["index.js", "index.d.ts", "README.md"],
+  "license": "MIT"
+}

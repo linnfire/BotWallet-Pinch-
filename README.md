@@ -8,6 +8,30 @@ BotWallet is built around a simple idea:
 
 > **AI agents can become customers.**
 
+## Merchant SDK
+
+`@botwallet/merchant` is a local workspace package that demonstrates how any website or API can return a machine-readable HTTP 402 offer, verify a BotWallet receipt, and unlock a purchase after Pinch confirms payment.
+
+Install from a neighbouring project:
+
+```bash
+npm install ../BotWallet/packages/merchant-sdk
+```
+
+Within this repository, npm workspaces link the package automatically after `npm install`. It has not been published to npm, so `npm install @botwallet/merchant` only works inside this workspace until it is published under that scope.
+
+Core flow:
+1. Agent requests premium content from BotNews.
+2. BotNews returns HTTP 402 Payment Required with a machine-readable offer.
+3. BotWallet validates Bot Limit budget rules.
+4. BotWallet charges through Pinch.
+5. BotWallet settles purchase with BotNews.
+6. Agent retries and receives premium content.
+
+See [`merchant-protocol.md`](./merchant-protocol.md) for the reusable resource contract for merchants offering paid articles, APIs, downloads, subscriptions, tickets, or physical products.
+
+
+
 Today, AI can find information and make decisions, but actually buying something on the internet is much harder. Most websites are built for humans. They expect someone to click buttons, enter card details, and complete a checkout.
 
 AI agents such as ChatGPT and Claude can already help people search, compare, and make decisions. But the point of autonomous AI is to make as few decisions as possible for the human. The next step is for agents to actually take action and buy things on their behalf.
@@ -687,6 +711,7 @@ After deployment:
 3. Redeploy BotWallet.
 
 
+<<<<<<< HEAD
 * The current news response is hardcoded for the demo, but the payment architecture is designed to work with other websites, APIs, and online services that implement the same machine-readable payment flow.
 * A website does not need to rebuild its entire payment system to support this concept. The goal is for existing HTTP-based services to be able to add a machine-readable payment flow with low adoption friction.
 * BotWallet can be used as its own AI assistant or potentially as a payment tool for other AI agents.
@@ -699,3 +724,23 @@ The core idea is:
 The opportunity is much bigger than one news website.
 
 As AI agents become more autonomous, they will need to buy more things. If Pinch becomes an early payment provider for that activity, it could gain transaction volume, new customer data, and an early position in a future industry before the market becomes crowded.
+=======
+- BotWallet web UI can run the premium unlock flow publicly.
+- BotNews is publicly browsable and exposes premium report APIs.
+- CLI demo still works locally with default localhost URLs or public URL overrides.
+- Wallet persistence is file-based locally and memory-backed when deployed on read-only serverless filesystem.
+# BotWallet
+
+## ChatGPT MCP connection
+
+BotWallet exposes an official MCP Streamable HTTP endpoint at `/mcp`. The MCP server reuses the existing server-side wallet, Bot Limit checks, Pinch payment service, and BotNews 402 settlement flow; it never receives card details or exposes Pinch secrets.
+
+1. Install dependencies: `npm install`
+2. Set `MCP_AUTH_TOKEN` to a long random value in `.env` (mandatory for production).
+3. Start the API/MCP server: `npm run dev:mcp`
+4. Test locally with MCP Inspector: `npx @modelcontextprotocol/inspector`, select **Streamable HTTP**, and use `http://localhost:8000/mcp` with `Authorization: Bearer <MCP_AUTH_TOKEN>`.
+
+The MCP tools are `get_wallet_status`, `search_research`, `purchase_premium_content`, `research_with_wallet`, `search_travel_options`, `purchase_travel_bundle`, `search_service_providers`, and `book_service`. Every purchase-capable tool calls the existing server-side Bot Limit and Pinch payment services, so approval and daily limits cannot be bypassed. BotNews is configured as repeatable pay-per-access: a delivered report consumes its access pass and the next request receives a new 402 offer.
+
+For ChatGPT developer-mode testing, deploy this same API at a stable HTTPS URL and connect `https://YOUR-DOMAIN/mcp`. Do not use a temporary tunnel for submission. Configure `MCP_AUTH_TOKEN`, `PINCH_CLIENT_SECRET`, and the BotNews URL only in the deployment's server-side environment. A production, user-facing ChatGPT connection should add OAuth on top of the bearer-token gate before publication.
+>>>>>>> ffa40eb (Publish latest BotWallet, BotNews, and planning updates)
